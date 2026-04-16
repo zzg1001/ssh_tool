@@ -48,84 +48,83 @@ class SecurityGuideDialog:
         title_label.pack(pady=(0, 15))
 
         # 说明文字
-        desc_text = (
-            "首次运行需要完成安全设置\n"
-            "这是一次性操作，完成后即可正常使用"
-        )
         desc_label = ttk.Label(
             main_frame,
-            text=desc_text,
+            text="首次运行需要完成安全设置",
             font=("SF Pro Text", 13),
             justify=tk.CENTER,
             foreground="#666666"
         )
-        desc_label.pack(pady=(0, 25))
-
-        # 主按钮 - 一键设置
-        self.auto_fix_btn = tk.Button(
-            main_frame,
-            text="一键完成设置",
-            command=self._try_auto_fix,
-            font=("SF Pro Text", 14, "bold"),
-            bg="#007AFF",
-            fg="white",
-            width=18,
-            height=2,
-            relief=tk.FLAT,
-            cursor="hand2"
-        )
-        self.auto_fix_btn.pack(pady=15)
-
-        # 提示文字
-        hint1 = ttk.Label(
-            main_frame,
-            text="点击后输入电脑密码即可完成",
-            font=("SF Pro Text", 11),
-            foreground="#888888"
-        )
-        hint1.pack(pady=(0, 20))
-
-        # 分隔线
-        ttk.Separator(main_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
-
-        # 手动设置选项
-        manual_label = ttk.Label(
-            main_frame,
-            text="或者手动设置：",
-            font=("SF Pro Text", 11),
-            foreground="#666666"
-        )
-        manual_label.pack(pady=(10, 5))
-
-        # 打开系统设置按钮
-        self.open_settings_btn = ttk.Button(
-            main_frame,
-            text="打开系统设置",
-            command=self._open_security_settings,
-            width=15
-        )
-        self.open_settings_btn.pack(pady=5)
-
-        # 跳过按钮
-        self.skip_btn = ttk.Button(
-            main_frame,
-            text="跳过，直接使用",
-            command=self._on_done,
-            width=15
-        )
-        self.skip_btn.pack(pady=10)
+        desc_label.pack(pady=(0, 20))
 
         # 状态标签
         self.status_label = ttk.Label(
             main_frame,
-            text="",
-            font=("SF Pro Text", 11)
+            text="正在设置...",
+            font=("SF Pro Text", 14)
         )
-        self.status_label.pack(pady=5)
+        self.status_label.pack(pady=20)
+
+        # 进度提示
+        self.hint_label = ttk.Label(
+            main_frame,
+            text="请在弹出的窗口中输入电脑密码",
+            font=("SF Pro Text", 11),
+            foreground="#888888"
+        )
+        self.hint_label.pack(pady=10)
+
+        # 完成按钮（初始隐藏）
+        self.done_btn = tk.Button(
+            main_frame,
+            text="开始使用",
+            command=self._on_done,
+            font=("SF Pro Text", 14, "bold"),
+            bg="#007AFF",
+            fg="white",
+            width=15,
+            height=2,
+            relief=tk.FLAT,
+            cursor="hand2"
+        )
+
+        # 自动执行设置
+        self.root.after(500, self._auto_setup)
+
+    def _auto_setup(self):
+        """自动执行安全设置"""
+        app_path = self._get_app_path()
+        if not app_path:
+            self.status_label.config(text="设置失败", foreground="red")
+            self.hint_label.config(text="无法确定应用路径")
+            self.done_btn.pack(pady=20)
+            return
+
+        # 使用 AppleScript 请求管理员权限执行命令
+        script = f'''
+        do shell script "xattr -cr \\"{app_path}\\"" with administrator privileges
+        '''
+        try:
+            subprocess.run(["osascript", "-e", script], check=True)
+            self._mark_first_run_done()
+            self.status_label.config(text="✓ 设置完成", foreground="green")
+            self.hint_label.config(text="")
+            self.done_btn.pack(pady=20)
+            # 2秒后自动关闭
+            self.root.after(2000, self._on_done)
+        except subprocess.CalledProcessError:
+            self.status_label.config(text="已取消", foreground="orange")
+            self.hint_label.config(text="您可以稍后再设置，现在直接使用")
+            self.done_btn.config(text="直接使用")
+            self.done_btn.pack(pady=20)
+        except Exception as e:
+            self.status_label.config(text="设置失败", foreground="red")
+            self.hint_label.config(text=str(e))
+            self.done_btn.pack(pady=20)
 
     def _open_security_settings(self):
         """打开系统设置的隐私与安全性页面"""
-        subprocess.run([
+        subprocess.Popen([
             "open",
             "x-apple.systempreferences:com.apple.preference.security?General"
         ])
