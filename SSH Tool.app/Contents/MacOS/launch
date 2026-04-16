@@ -1,0 +1,12 @@
+#!/bin/bash
+# SSH Tool 启动器
+
+APP_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+cd "$APP_DIR"
+
+# 优先使用 miniconda Python
+if [ -x "/Users/ledi/miniconda3/bin/python" ]; then
+    exec /Users/ledi/miniconda3/bin/python main.py
+else
+    exec python3 main.py
+fi
