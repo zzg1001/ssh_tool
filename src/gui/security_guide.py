@@ -16,7 +16,7 @@ class SecurityGuideDialog:
 
     def __init__(self, parent=None):
         self.root = tk.Toplevel(parent) if parent else tk.Tk()
-        self.root.title("SSH Tool - 首次使用设置")
+        self.root.title("zzgShell - 首次使用设置")
         self.root.geometry("480x420")
         self.root.resizable(False, False)
 
@@ -42,7 +42,7 @@ class SecurityGuideDialog:
         # 标题
         title_label = ttk.Label(
             main_frame,
-            text="欢迎使用 SSH Tool",
+            text="欢迎使用 zzgShell",
             font=("SF Pro Display", 20, "bold")
         )
         title_label.pack(pady=(0, 15))
@@ -179,9 +179,9 @@ class SecurityGuideDialog:
                 current = parent
             # 尝试默认路径
             possible_paths = [
-                os.path.join(os.getcwd(), "SSH Tool.app"),
-                "/Applications/SSH Tool.app",
-                os.path.expanduser("~/Applications/SSH Tool.app"),
+                os.path.join(os.getcwd(), "zzgShell.app"),
+                "/Applications/zzgShell.app",
+                os.path.expanduser("~/Applications/zzgShell.app"),
             ]
             for path in possible_paths:
                 if os.path.exists(path):

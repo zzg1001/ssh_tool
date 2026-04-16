@@ -21,9 +21,9 @@ OPTIONS = {
         'src.tui.terminal',
     ],
     'plist': {
-        'CFBundleName': 'SSH Tool',
-        'CFBundleDisplayName': 'SSH Tool',
-        'CFBundleIdentifier': 'com.sshtool.app',
+        'CFBundleName': 'zzgShell',
+        'CFBundleDisplayName': 'zzgShell',
+        'CFBundleIdentifier': 'com.zzg.shell',
         'CFBundleVersion': '1.0.0',
         'CFBundleShortVersionString': '1.0.0',
         'LSMinimumSystemVersion': '10.15',
@@ -32,7 +32,7 @@ OPTIONS = {
 }
 
 setup(
-    name='SSH Tool',
+    name='zzgShell',
     app=APP,
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},

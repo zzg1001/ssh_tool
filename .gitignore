@@ -28,7 +28,7 @@ env/
 *.swo
 
 # App bundle (use dist/ version)
-SSH Tool.app/
+zzgShell.app/
 
 # Temp files
 *.command

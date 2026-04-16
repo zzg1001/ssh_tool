@@ -9,9 +9,9 @@ from ..storage import Connection
 
 
 class SSHToolApp(App):
-    """SSH Tool TUI 应用"""
+    """zzgShell TUI 应用"""
 
-    TITLE = "SSH Tool"
+    TITLE = "zzgShell"
     CSS = """
     Screen {
         background: $surface;

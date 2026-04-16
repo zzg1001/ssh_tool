@@ -61,7 +61,7 @@ class ConnectionList(Screen):
     """
 
     def compose(self) -> ComposeResult:
-        yield Static("SSH Tool - 连接管理", id="title")
+        yield Static("zzgShell - 连接管理", id="title")
         with Container(id="table-container"):
             yield DataTable(id="conn-table")
         with Container(id="buttons"):

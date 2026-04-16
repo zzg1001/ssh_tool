@@ -13,7 +13,7 @@ from .terminal_notebook import TerminalNotebook
 
 
 class MainWindow:
-    """SSH Tool 主窗口"""
+    """zzgShell 主窗口"""
 
     def __init__(self):
         # 使用 TkinterDnD 以支持拖放功能
@@ -21,7 +21,7 @@ class MainWindow:
             self.root = TkinterDnD.Tk()
         else:
             self.root = tk.Tk()
-        self.root.title("SSH Tool")
+        self.root.title("zzgShell")
         self.root.geometry("1200x750")
         self.root.minsize(900, 600)
         self.root.configure(bg='#f0f0f0')
