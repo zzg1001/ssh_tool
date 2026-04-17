@@ -87,14 +87,46 @@ class TerminalWidget:
         # 底部系统状态栏
         self._setup_system_status()
 
-        # 禁用 Text 组件的默认按键行为，让我们完全控制输入
-        # 修改 bindtags 移除 "Text" 类级别的默认绑定
+        # 隐藏的输入框，用于处理 IME 中文输入
+        self._ime_entry = tk.Entry(term_container, width=1)
+        self._ime_entry.place(x=-100, y=-100)  # 放在屏幕外
+        self._ime_var = tk.StringVar()
+        self._ime_entry.configure(textvariable=self._ime_var)
+        self._ime_var.trace_add('write', self._on_ime_input)
+
+        # 绑定隐藏输入框的特殊键
+        self._ime_entry.bind('<Return>', self._on_return)
+        self._ime_entry.bind('<BackSpace>', self._on_backspace)
+        self._ime_entry.bind('<Tab>', self._on_tab)
+        self._ime_entry.bind('<Escape>', self._on_escape)
+        self._ime_entry.bind('<Up>', self._on_arrow)
+        self._ime_entry.bind('<Down>', self._on_arrow)
+        self._ime_entry.bind('<Left>', self._on_arrow)
+        self._ime_entry.bind('<Right>', self._on_arrow)
+        self._ime_entry.bind('<Home>', self._on_home_end)
+        self._ime_entry.bind('<End>', self._on_home_end)
+        self._ime_entry.bind('<Control-c>', self._on_ctrl_c)
+        self._ime_entry.bind('<Control-d>', self._on_ctrl_d)
+        self._ime_entry.bind('<Control-z>', self._on_ctrl_z)
+        self._ime_entry.bind('<Control-l>', self._on_ctrl_l)
+        self._ime_entry.bind('<Control-a>', self._on_ctrl_a)
+        self._ime_entry.bind('<Control-e>', self._on_ctrl_e)
+        self._ime_entry.bind('<Control-u>', self._on_ctrl_u)
+        self._ime_entry.bind('<Control-k>', self._on_ctrl_k)
+        self._ime_entry.bind('<Control-w>', self._on_ctrl_w)
+        self._ime_entry.bind('<Control-v>', self._on_paste)
+
+        # 点击终端时，聚焦到隐藏输入框
+        self.terminal.bind('<Button-1>', self._focus_ime_entry)
+        self.terminal.bind('<FocusIn>', self._focus_ime_entry)
+
+        # 禁用 Text 组件的默认按键行为
         bindtags = list(self.terminal.bindtags())
         if "Text" in bindtags:
             bindtags.remove("Text")
         self.terminal.bindtags(tuple(bindtags))
 
-        # 绑定键盘事件
+        # 终端的按键事件（用于非 IME 情况下的后备）
         self.terminal.bind('<Key>', self._on_key)
         self.terminal.bind('<Return>', self._on_return)
         self.terminal.bind('<BackSpace>', self._on_backspace)
@@ -615,15 +647,41 @@ df / | tail -1 | awk '{print $5}'
             pass  # 剪贴板为空
         return "break"
 
+    # ===== IME 输入处理 =====
+    def _focus_ime_entry(self, event=None):
+        """聚焦到隐藏的 IME 输入框"""
+        self._ime_entry.focus_set()
+        # 不返回 "break"，让其他事件处理程序继续运行（如 SFTP 面板更新）
+
+    def _on_ime_input(self, *args):
+        """处理 IME 输入（中文等）"""
+        text = self._ime_var.get()
+        if text:
+            self._send(text)
+            # 清空输入框，准备下一次输入
+            self._ime_var.set('')
+
     # ===== 按键处理 =====
     def _on_key(self, event):
-        """按键事件"""
+        """按键事件（后备，主要输入通过 IME Entry 处理）"""
+        # 忽略修饰键
         if event.keysym in ('Shift_L', 'Shift_R', 'Control_L', 'Control_R',
-                           'Alt_L', 'Alt_R', 'Meta_L', 'Meta_R', 'Super_L', 'Super_R'):
+                           'Alt_L', 'Alt_R', 'Meta_L', 'Meta_R', 'Super_L', 'Super_R',
+                           'Caps_Lock', 'Num_Lock'):
             return "break"
 
-        if event.char and ord(event.char) >= 32 and ord(event.char) != 127:
-            self._send(event.char)
+        # 没有字符，跳过
+        if not event.char:
+            return "break"
+
+        char_code = ord(event.char[0])
+
+        # 控制字符，跳过
+        if char_code < 32 or char_code == 127:
+            return "break"
+
+        # 发送字符到 SSH（后备，正常情况下通过 _on_ime_input 处理）
+        self._send(event.char)
         return "break"
 
     def _on_return(self, event):
