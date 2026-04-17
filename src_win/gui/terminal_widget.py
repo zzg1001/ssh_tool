@@ -299,7 +299,7 @@ class TerminalWidget:
                 try:
                     stats = self._fetch_system_stats()
                     if stats:
-                        self.frame.after(0, lambda s=stats: self._update_stats_display(s))
+                        self._safe_after(lambda s=stats: self._update_stats_display(s))
                 except:
                     pass
                 time.sleep(5)  # 每5秒更新一次
@@ -377,30 +377,39 @@ df / | tail -1 | awk '{print $5}'
         if not stats:
             return
 
-        self.hostname_label.config(text=stats['hostname'])
-        self.cpu_label.config(text=f"{stats['cpu']}%")
+        try:
+            if not self.hostname_label.winfo_exists():
+                return
+        except:
+            return
 
-        # 更新 CPU 进度条
-        self.cpu_bar.delete('all')
-        bar_width = int(36 * stats['cpu'] / 100)
-        color = '#107c10' if stats['cpu'] < 70 else '#ff8c00' if stats['cpu'] < 90 else '#d13438'
-        self.cpu_bar.create_rectangle(0, 0, bar_width, 10, fill=color, outline='')
+        try:
+            self.hostname_label.config(text=stats['hostname'])
+            self.cpu_label.config(text=f"{stats['cpu']}%")
 
-        self.mem_label.config(text=f"{stats['mem_used']:.1f}/{stats['mem_total']:.0f}G")
+            # 更新 CPU 进度条
+            self.cpu_bar.delete('all')
+            bar_width = int(36 * stats['cpu'] / 100)
+            color = '#107c10' if stats['cpu'] < 70 else '#ff8c00' if stats['cpu'] < 90 else '#d13438'
+            self.cpu_bar.create_rectangle(0, 0, bar_width, 10, fill=color, outline='')
 
-        # 格式化网速
-        def fmt_speed(kb):
-            if kb >= 1024:
-                return f"{kb/1024:.1f}M/s"
-            return f"{kb:.0f}K/s"
+            self.mem_label.config(text=f"{stats['mem_used']:.1f}/{stats['mem_total']:.0f}G")
 
-        self.upload_label.config(text=fmt_speed(stats['tx_speed']))
-        self.download_label.config(text=fmt_speed(stats['rx_speed']))
+            # 格式化网速
+            def fmt_speed(kb):
+                if kb >= 1024:
+                    return f"{kb/1024:.1f}M/s"
+                return f"{kb:.0f}K/s"
 
-        uptime = stats['uptime']
-        self.uptime_label.config(text=f"{uptime}d")
-        self.user_label.config(text=stats['users'])
-        self.disk_label.config(text=f"{stats['disk']}%")
+            self.upload_label.config(text=fmt_speed(stats['tx_speed']))
+            self.download_label.config(text=fmt_speed(stats['rx_speed']))
+
+            uptime = stats['uptime']
+            self.uptime_label.config(text=f"{uptime}d")
+            self.user_label.config(text=stats['users'])
+            self.disk_label.config(text=f"{stats['disk']}%")
+        except:
+            pass
 
     def connect(self):
         """连接"""
@@ -456,32 +465,51 @@ df / | tail -1 | awk '{print $5}'
                         now = time.time()
                         if now - self._last_refresh >= refresh_interval:
                             self._last_refresh = now
-                            self.frame.after(0, self._refresh_display)
+                            self._safe_after(self._refresh_display)
                         elif not self._pending_refresh:
                             self._pending_refresh = True
                             delay = int((refresh_interval - (now - self._last_refresh)) * 1000)
-                            self.frame.after(max(10, delay), self._delayed_refresh)
+                            self._safe_after(self._delayed_refresh, max(10, delay))
                     else:
                         break
                 elif self.ssh_client.channel.closed:
                     break
                 else:
                     time.sleep(0.01)  # 避免 CPU 空转
-            except Exception as e:
-                self.frame.after(0, lambda: self._update_display(f"\r\n[错误: {e}]\r\n"))
+            except Exception as ex:
+                err_msg = str(ex)
+                self._safe_after(lambda m=err_msg: self._update_display(f"\r\n[错误: {m}]\r\n"))
                 break
 
-        self.frame.after(0, lambda: self._update_display("\r\n[连接已关闭]\r\n"))
-        self.frame.after(0, lambda: self._set_status("已断开", self.STATUS_DISCONNECTED))
+        self._safe_after(lambda: self._update_display("\r\n[连接已关闭]\r\n"))
+        self._safe_after(lambda: self._set_status("已断开", self.STATUS_DISCONNECTED))
+
+    def _safe_after(self, func, delay=0):
+        """安全的 after 调用"""
+        try:
+            if self.frame.winfo_exists():
+                self.frame.after(delay, func)
+        except:
+            pass
 
     def _delayed_refresh(self):
         """延迟刷新"""
         self._pending_refresh = False
         self._last_refresh = time.time()
-        self._refresh_display()
+        try:
+            if self.terminal.winfo_exists():
+                self._refresh_display()
+        except:
+            pass
 
     def _refresh_display(self):
         """从 pyte screen 刷新显示（优化版）"""
+        try:
+            if not self.terminal.winfo_exists():
+                return
+        except:
+            return
+
         self.terminal.configure(state=tk.NORMAL)
         self.terminal.delete('1.0', tk.END)
 
@@ -561,13 +589,23 @@ df / | tail -1 | awk '{print $5}'
 
     def _update_display(self, text: str):
         """直接更新显示"""
-        self.stream.feed(text)
-        self._refresh_display()
+        try:
+            if not self.terminal.winfo_exists():
+                return
+            self.stream.feed(text)
+            self._refresh_display()
+        except:
+            pass
 
     def _set_status(self, text: str, color: str):
         """设置状态"""
-        self.status_var.set(f"  {text}: {self.connection.username}@{self.connection.host}")
-        self.status_label.configure(bg=color)
+        try:
+            if not self.status_label.winfo_exists():
+                return
+            self.status_var.set(f"  {text}: {self.connection.username}@{self.connection.host}")
+            self.status_label.configure(bg=color)
+        except:
+            pass
 
     def _send(self, data: str):
         """发送数据"""

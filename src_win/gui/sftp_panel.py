@@ -536,7 +536,7 @@ class SFTPPanel:
                 self.frame.after(0, lambda: self.path_var.set(home))
                 self.frame.after(0, lambda: self._load_directory(home))
             except Exception as e:
-                self.frame.after(0, lambda: self._show_error(str(e)))
+                self.frame.after(0, lambda err=str(e): self._show_error(err))
 
         threading.Thread(target=load, daemon=True).start()
 
@@ -550,7 +550,7 @@ class SFTPPanel:
                 self.current_path = path
                 self.frame.after(0, lambda: self._display_files(files))
             except Exception as e:
-                self.frame.after(0, lambda: self._show_error(str(e)))
+                self.frame.after(0, lambda err=str(e): self._show_error(err))
 
         threading.Thread(target=load, daemon=True).start()
 
