@@ -36,25 +36,11 @@ class MainWindow:
         self.root.minsize(960, 640)
         self.root.configure(bg=self.BG_COLOR)
 
-        # 启用高 DPI 缩放
-        self._setup_dpi_scaling()
-
         # Windows 风格
         self._setup_style()
         self._setup_ui()
         self._setup_menu()
         self._bind_shortcuts()
-
-    def _setup_dpi_scaling(self):
-        """设置高 DPI 缩放"""
-        try:
-            # 获取当前 DPI 缩放比例
-            dpi = self.root.winfo_fpixels('1i')
-            scale_factor = dpi / 72.0  # 标准 DPI 是 72
-            # 设置 Tk 缩放
-            self.root.tk.call('tk', 'scaling', scale_factor)
-        except Exception:
-            pass
 
     def _setup_style(self):
         """配置 ttk 样式"""

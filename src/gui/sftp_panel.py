@@ -535,10 +535,17 @@ class SFTPPanel:
 
     def set_client(self, ssh_client: SSHClient):
         """设置 SSH 客户端并加载文件列表"""
+        # 检查 ssh_client 是否有效且已连接
+        if not ssh_client or not ssh_client.client:
+            return
+
         self.ssh_client = ssh_client
 
         def load():
             try:
+                # 再次检查连接是否有效
+                if not self.ssh_client or not self.ssh_client.client:
+                    return
                 home = self.ssh_client.get_home_dir()
                 self.current_path = home
                 self.frame.after(0, lambda: self.path_var.set(home))
