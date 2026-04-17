@@ -37,6 +37,7 @@ PyInstaller.__main__.run([
     '--hidden-import', 'tkinter',
     '--hidden-import', 'bcrypt',
     '--hidden-import', 'nacl',
+    '--hidden-import', 'src.gui.terminal_widget_win',
     '--collect-all', 'paramiko',
     '--collect-all', 'cryptography',
     '--collect-all', 'pyte',

@@ -1,8 +1,14 @@
 """终端标签页管理"""
 
+import sys
 import tkinter as tk
 
-from .terminal_widget import TerminalWidget
+# 根据平台选择终端组件
+if sys.platform == 'win32':
+    from .terminal_widget_win import TerminalWidgetWin as TerminalWidget
+else:
+    from .terminal_widget import TerminalWidget
+
 from ..storage import Connection
 
 
