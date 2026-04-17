@@ -132,11 +132,11 @@ class TerminalWidget:
         self.terminal.bind('<Control-w>', self._on_ctrl_w)
         self.terminal.bind('<Control-r>', self._on_ctrl_r)
 
-        # macOS Cmd 快捷键 - 复制粘贴
-        self.terminal.bind('<Command-c>', self._on_copy)
-        self.terminal.bind('<Command-v>', self._on_paste)
-        self.terminal.bind('<Control-Shift-c>', self._on_copy)  # Linux style
-        self.terminal.bind('<Control-Shift-v>', self._on_paste)  # Linux style
+        # Windows 复制粘贴快捷键
+        self.terminal.bind('<Control-Shift-c>', self._on_copy)
+        self.terminal.bind('<Control-Shift-v>', self._on_paste)
+        self.terminal.bind('<Control-Insert>', self._on_copy)
+        self.terminal.bind('<Shift-Insert>', self._on_paste)
 
         # 配置 ANSI 颜色标签
         self._setup_color_tags()
@@ -302,7 +302,7 @@ class TerminalWidget:
                         self.frame.after(0, lambda s=stats: self._update_stats_display(s))
                 except:
                     pass
-                time.sleep(3)  # 每3秒更新一次
+                time.sleep(5)  # 每5秒更新一次
 
         threading.Thread(target=monitor, daemon=True).start()
 
@@ -440,18 +440,33 @@ df / | tail -1 | awk '{print $5}'
 
     def _read_loop(self):
         """读取循环"""
+        self._pending_refresh = False
+        self._last_refresh = 0
+        refresh_interval = 0.03  # 最小刷新间隔 30ms
+
         while self._running and self.ssh_client and self.ssh_client.channel:
             try:
                 if self.ssh_client.channel.recv_ready():
-                    data = self.ssh_client.channel.recv(4096)
+                    data = self.ssh_client.channel.recv(8192)
                     if data:
                         text = data.decode('utf-8', errors='replace')
                         self.stream.feed(text)
-                        self.frame.after(0, self._refresh_display)
+
+                        # 限制刷新频率
+                        now = time.time()
+                        if now - self._last_refresh >= refresh_interval:
+                            self._last_refresh = now
+                            self.frame.after(0, self._refresh_display)
+                        elif not self._pending_refresh:
+                            self._pending_refresh = True
+                            delay = int((refresh_interval - (now - self._last_refresh)) * 1000)
+                            self.frame.after(max(10, delay), self._delayed_refresh)
                     else:
                         break
                 elif self.ssh_client.channel.closed:
                     break
+                else:
+                    time.sleep(0.01)  # 避免 CPU 空转
             except Exception as e:
                 self.frame.after(0, lambda: self._update_display(f"\r\n[错误: {e}]\r\n"))
                 break
@@ -459,54 +474,40 @@ df / | tail -1 | awk '{print $5}'
         self.frame.after(0, lambda: self._update_display("\r\n[连接已关闭]\r\n"))
         self.frame.after(0, lambda: self._set_status("已断开", self.STATUS_DISCONNECTED))
 
+    def _delayed_refresh(self):
+        """延迟刷新"""
+        self._pending_refresh = False
+        self._last_refresh = time.time()
+        self._refresh_display()
+
     def _refresh_display(self):
-        """从 pyte screen 刷新显示（带颜色）"""
+        """从 pyte screen 刷新显示（优化版）"""
         self.terminal.configure(state=tk.NORMAL)
         self.terminal.delete('1.0', tk.END)
 
         cursor_y = self.screen.cursor.y
         cursor_x = self.screen.cursor.x
+        buffer = self.screen.buffer
+        lines = []
 
-        # 渲染屏幕内容（带颜色信息）
+        # 先收集所有文本（不带颜色的快速模式）
         for y in range(self.screen.lines):
-            if y > 0:
-                self.terminal.insert(tk.END, '\n')
-
-            line_end = self.screen.columns
-            # 找到行尾（去除尾部空格，但光标行保留到光标位置）
+            line = buffer[y]
+            # 找到行尾
             if y == cursor_y:
                 line_end = max(cursor_x + 1, self._get_line_end(y))
             else:
                 line_end = self._get_line_end(y)
 
-            x = 0
-            while x < line_end:
-                char = self.screen.buffer[y][x]
-                char_data = char.data if char.data else " "
+            # 快速构建行文本
+            row_text = ''.join(
+                line[x].data if line[x].data else ' '
+                for x in range(line_end)
+            )
+            lines.append(row_text)
 
-                # 收集连续相同样式的字符
-                tags = self._get_char_tags(char)
-                start_x = x
-                text = char_data
-
-                x += 1
-                while x < line_end:
-                    next_char = self.screen.buffer[y][x]
-                    next_tags = self._get_char_tags(next_char)
-                    if next_tags != tags:
-                        break
-                    text += next_char.data if next_char.data else " "
-                    x += 1
-
-                # 插入文本并应用标签
-                if tags:
-                    start_idx = self.terminal.index(tk.END + "-1c")
-                    self.terminal.insert(tk.END, text)
-                    end_idx = self.terminal.index(tk.END + "-1c")
-                    for tag in tags:
-                        self.terminal.tag_add(tag, start_idx, end_idx)
-                else:
-                    self.terminal.insert(tk.END, text)
+        # 一次性插入所有文本
+        self.terminal.insert('1.0', '\n'.join(lines))
 
         # 移除末尾空行但保留光标所在行
         # (已在渲染时处理)
@@ -602,12 +603,35 @@ df / | tail -1 | awk '{print $5}'
     # ===== 按键处理 =====
     def _on_key(self, event):
         """按键事件"""
+        # 忽略修饰键
         if event.keysym in ('Shift_L', 'Shift_R', 'Control_L', 'Control_R',
-                           'Alt_L', 'Alt_R', 'Meta_L', 'Meta_R', 'Super_L', 'Super_R'):
+                           'Alt_L', 'Alt_R', 'Meta_L', 'Meta_R', 'Super_L', 'Super_R',
+                           'Caps_Lock', 'Num_Lock', 'Scroll_Lock'):
             return "break"
 
-        if event.char and ord(event.char) >= 32 and ord(event.char) != 127:
-            self._send(event.char)
+        # 如果有 Ctrl 修饰键，跳过（由专门的绑定处理）
+        # Windows: Control = 0x4, Alt = 0x20000 or 0x8
+        if event.state & 0x4:  # Control held
+            return "break"
+
+        # 优先使用 event.char
+        if event.char:
+            code = ord(event.char)
+            # 可打印字符 (32-126)
+            if 32 <= code <= 126:
+                self._send(event.char)
+                return "break"
+
+        # 备用：单字符 keysym (a-z, 0-9 等)
+        if event.keysym and len(event.keysym) == 1:
+            char = event.keysym
+            # 检查是否按住 Shift
+            if event.state & 0x1:  # Shift held
+                char = char.upper()
+            else:
+                char = char.lower()
+            self._send(char)
+
         return "break"
 
     def _on_return(self, event):
@@ -627,6 +651,10 @@ df / | tail -1 | awk '{print $5}'
         return "break"
 
     def _on_ctrl_c(self, event):
+        # 确保 Control 键确实被按下
+        if not (event.state & 0x4):
+            return  # 让事件继续传播到 _on_key
+
         # 如果有选中文本，执行复制；否则发送 Ctrl+C
         try:
             self.terminal.get(tk.SEL_FIRST, tk.SEL_LAST)
