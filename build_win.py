@@ -1,7 +1,6 @@
 """
 Windows 打包脚本
 使用方法：在 Windows 上运行 python build_win.py
-需要先安装：pip install pyinstaller
 """
 
 import PyInstaller.__main__
@@ -12,24 +11,20 @@ import sys
 APP_NAME = "zzgShell"
 
 # 清理旧文件
-for folder in ['build', 'dist', f'{APP_NAME}.spec']:
+for folder in ['build', 'dist']:
     if os.path.exists(folder):
-        if os.path.isdir(folder):
-            shutil.rmtree(folder)
-        else:
-            os.remove(folder)
-
-# 获取 Python 路径
-python_path = os.path.dirname(sys.executable)
+        shutil.rmtree(folder)
+if os.path.exists(f'{APP_NAME}.spec'):
+    os.remove(f'{APP_NAME}.spec')
 
 # PyInstaller 打包参数
 PyInstaller.__main__.run([
-    'main.py',
+    'main_win.py',
     '--name', APP_NAME,
-    '--windowed',  # 无控制台窗口
-    '--onefile',   # 打包成单个 exe 文件
+    '--windowed',
+    '--onefile',
     '--icon', 'zzgShell.ico',
-    '--add-data', f'src{os.pathsep}src',
+    '--add-data', f'src_win{os.pathsep}src_win',
     '--hidden-import', 'paramiko',
     '--hidden-import', 'cryptography',
     '--hidden-import', 'cffi',
@@ -37,11 +32,10 @@ PyInstaller.__main__.run([
     '--hidden-import', 'tkinter',
     '--hidden-import', 'bcrypt',
     '--hidden-import', 'nacl',
-    '--hidden-import', 'src.gui.terminal_widget_win',
     '--collect-all', 'paramiko',
     '--collect-all', 'cryptography',
     '--collect-all', 'pyte',
-    '--noupx',  # 不使用 UPX 压缩，避免兼容问题
+    '--noupx',
 ])
 
 print(f"\n=== 完成 ===")
