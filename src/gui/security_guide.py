@@ -84,8 +84,7 @@ class SecurityGuideDialog:
             fg="white",
             width=15,
             height=2,
-            relief=tk.FLAT,
-            cursor="hand2"
+            relief=tk.FLAT
         )
 
         # 自动执行设置
@@ -233,20 +232,50 @@ def check_and_show_guide():
     if not is_first_run():
         return True
 
-    # 首次运行，显示引导
-    dialog = SecurityGuideDialog()
-    result = dialog.show()
-
-    # 如果用户点击了跳过，也标记为完成
-    if result:
+    # 首次运行，直接请求系统认证
+    app_path = _get_app_path()
+    if app_path:
+        script = f'''
+        do shell script "xattr -cr \\"{app_path}\\"" with administrator privileges
+        '''
         try:
-            os.makedirs(CONFIG_DIR, exist_ok=True)
-            with open(FIRST_RUN_FLAG, 'w') as f:
-                f.write("done")
+            subprocess.run(["osascript", "-e", script], check=True)
         except:
-            pass
+            pass  # 用户取消或失败，继续使用
 
-    return result
+    # 标记首次运行完成
+    try:
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        with open(FIRST_RUN_FLAG, 'w') as f:
+            f.write("done")
+    except:
+        pass
+
+    return True
+
+
+def _get_app_path():
+    """获取应用路径"""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(os.path.dirname(os.path.dirname(sys.executable)))
+    else:
+        current = os.path.dirname(os.path.abspath(__file__))
+        while current != '/':
+            if current.endswith('.app'):
+                return current
+            parent = os.path.dirname(current)
+            if parent == current:
+                break
+            current = parent
+        possible_paths = [
+            os.path.join(os.getcwd(), "zzgShell.app"),
+            "/Applications/zzgShell.app",
+            os.path.expanduser("~/Applications/zzgShell.app"),
+        ]
+        for path in possible_paths:
+            if os.path.exists(path):
+                return path
+    return None
 
 
 def show_guide_dialog(parent=None):

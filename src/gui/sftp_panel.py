@@ -92,8 +92,7 @@ class SFTPPanel:
             'activeforeground': '#333333',
             'relief': tk.FLAT,
             'font': ('', 12),
-            'width': 2,
-            'cursor': 'hand2'
+            'width': 2
         }
 
         # 上传按钮

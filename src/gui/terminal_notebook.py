@@ -60,8 +60,7 @@ class TerminalNotebook:
             text=f" {name} ",
             bg='#2d2d2d',
             fg='#d4d4d4',
-            font=('', 9),
-            cursor='hand2'
+            font=('', 9)
         )
         label.pack(side=tk.LEFT, padx=(4, 0))
 
@@ -71,8 +70,7 @@ class TerminalNotebook:
             text="×",
             bg='#2d2d2d',
             fg='#808080',
-            font=('', 10),
-            cursor='hand2'
+            font=('', 10)
         )
         close_btn.pack(side=tk.LEFT, padx=(3, 5))
 

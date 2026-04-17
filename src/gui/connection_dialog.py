@@ -125,7 +125,7 @@ class ConnectionDialog:
         ok_btn = tk.Label(btn_inner, text="    OK    ",
                          bg='#4caf50', fg='white',
                          font=('', 13, 'bold'),
-                         padx=20, pady=10, cursor='hand2')
+                         padx=20, pady=10)
         ok_btn.pack(side=tk.LEFT, padx=10)
         ok_btn.bind('<Button-1>', lambda e: self._on_save())
         ok_btn.bind('<Enter>', lambda e: ok_btn.configure(bg='#45a049'))
@@ -135,7 +135,7 @@ class ConnectionDialog:
         cancel_btn = tk.Label(btn_inner, text="  Cancel  ",
                              bg='#f44336', fg='white',
                              font=('', 13, 'bold'),
-                             padx=20, pady=10, cursor='hand2')
+                             padx=20, pady=10)
         cancel_btn.pack(side=tk.LEFT, padx=10)
         cancel_btn.bind('<Button-1>', lambda e: self.dialog.destroy())
         cancel_btn.bind('<Enter>', lambda e: cancel_btn.configure(bg='#e53935'))

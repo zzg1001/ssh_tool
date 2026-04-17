@@ -112,6 +112,48 @@ class ConnectionStorage:
             return True
         return False
 
+    def export_connections(self, file_path: Path, include_password: bool = False) -> int:
+        """导出所有连接到文件"""
+        connections = self.list_connections()
+        export_data = []
+        for conn in connections:
+            data = {
+                "name": conn.name,
+                "host": conn.host,
+                "port": conn.port,
+                "username": conn.username,
+                "key_file": conn.key_file,
+            }
+            if include_password and conn.password:
+                data["password"] = conn.password  # 明文导出
+            export_data.append(data)
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(export_data, f, indent=2, ensure_ascii=False)
+
+        return len(export_data)
+
+    def import_connections(self, file_path: Path) -> int:
+        """从文件导入连接"""
+        with open(file_path, "r", encoding="utf-8") as f:
+            import_data = json.load(f)
+
+        count = 0
+        for item in import_data:
+            conn = Connection(
+                id=str(uuid.uuid4()),
+                name=item.get("name", ""),
+                host=item.get("host", ""),
+                port=item.get("port", 22),
+                username=item.get("username", ""),
+                password=item.get("password", ""),
+                key_file=item.get("key_file", ""),
+            )
+            self.add_connection(conn)
+            count += 1
+
+        return count
+
 
 # 全局实例
 storage = ConnectionStorage()
